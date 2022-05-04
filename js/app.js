@@ -9,6 +9,9 @@ function eventListeners() {
     document.addEventListener("DOMContentLoaded", askBudget);
 
     form.addEventListener("submit", addExpense);
+
+    const deleteBtn = document.querySelector("#delete-btn");
+    
 }
 
 
@@ -20,6 +23,21 @@ class Budget {
         this.expenses = [];
     }
 
+    newExpense(expense) {
+        this.expenses = [...this.expenses, expense];
+        this.calculateRest();
+    }
+
+    calculateRest() {
+        const spent = this.expenses.reduce( (total, expense) => total + expense.ammount, 0);
+        this.rest = this.budget - spent;
+    }
+
+    deleteExpense(id) {
+        this.expenses = this.expenses.filter( expense => expense.id !== id);
+        this.calculateRest();
+       
+    }
 
 }
 
@@ -40,7 +58,7 @@ class UI {
         if(type === "error") {
             divMessage.classList.add("alert-danger");
         } else {
-            divMessage.classList.add("alert-sucess");
+            divMessage.classList.add("alert-success");
         };
 
         //message
@@ -54,6 +72,69 @@ class UI {
             divMessage.remove();
         }, 3000);
     };
+
+    addExpenseHTML(expenses) {
+
+        //clear previus html expenses
+        this.clearHTML();
+
+        //we iterate over the expenses list
+        for(let i of expenses) {
+            //create li
+            const expenseRow = document.createElement("li");
+            expenseRow.className = "list-group-item d-flex justify-content-between align-items-center";
+            expenseRow.dataset.id = i.id;
+
+            //add html of the expense
+            expenseRow.innerHTML = `
+                ${i.name} <span class="badge badge-primary badge-pill">$${i.ammount}</span>
+            
+            `;
+
+            //add a delete button
+            const deleteBtn = document.createElement("button");
+            deleteBtn.classList.add("btn", "btn-danger", "delete-expense");
+            deleteBtn.textContent = "X";
+            deleteBtn.onclick = ()=> deleteExpense(i.id);
+            expenseRow.appendChild(deleteBtn);
+
+            //add to the html
+            expensesList.appendChild(expenseRow);
+        }
+    }
+
+    clearHTML(){
+        while(expensesList.firstChild) {
+            expensesList.removeChild(expensesList.firstChild);
+        }
+    }
+
+    updateRest(rest) {
+        document.querySelector("#restante").textContent = rest;
+    }
+
+    checkBudget(budgetObj) {
+        const {rest, budget} = budgetObj;
+        const restDiv = document.querySelector(".restante");
+
+        //check 25% left
+        if( (budget/4) > rest) {
+            restDiv.classList.remove("alert-success", "alert-warning");
+            restDiv.classList.add("alert-danger");
+        } else if( (budget/2) > rest) {
+            restDiv.classList.remove("alert-success", "alert-danger");
+            restDiv.classList.add("alert-warning");
+        } else {
+            restDiv.classList.remove("alert-danger", "alert-warning");
+            restDiv.classList.add("alert-success");
+        }
+
+        //print out of budget
+
+        if(rest <= 0) {
+            this.printAlert("The budget is out!", "error");
+        };
+    }
 };
 
 //instantiate UI
@@ -65,13 +146,11 @@ let budget;
 
 //functions
 function askBudget() {
-    // const userBudget = prompt("What is your budget?");
-    // console.log(userBudget);
-    // if(userBudget === "" || userBudget == null || isNaN(userBudget) || userBudget <= 0) {
-    //     window.location.reload();
-    // };
-
-    const userBudget = 500;
+    const userBudget = prompt("What is your budget?");
+    console.log(userBudget);
+    if(userBudget === "" || userBudget == null || isNaN(userBudget) || userBudget <= 0) {
+        window.location.reload();
+    };
 
     //Valid budget
     budget = new Budget(userBudget);
@@ -83,18 +162,60 @@ function addExpense(e) {
     e.preventDefault();
 
     //read form values
-    const name = document.querySelector("#gasto");
-    const ammount = document.querySelector("#cantidad");
+    const name = document.querySelector("#gasto").value;
+    const ammount = Number(document.querySelector("#cantidad").value);
 
-    if(name.value === "" || ammount.value === "") {
+    if(name === "" || ammount === "") {
         ui.printAlert("Both fields are requeried!", "error");
 
         return;
-    } else if(ammount.value <= 0 || isNaN(ammount.value)) {
+    } else if(ammount <= 0 || isNaN(ammount)) {
         ui.printAlert("You can not add 0 or negative ammount!", "error");
 
         return;
     };
+    //create an object  with the values
+    const expense = {name, ammount, id: Date.now()};
+    
+    
+    //add a new expense
+    budget.newExpense(expense);
+    
+    //print alert
+    ui.printAlert("Correcto!", "correcto");
 
-    console.log("agregando gasto...");
+    
+
+    //adding expenses to the html
+    const {expenses, rest} = budget
+    ui.addExpenseHTML(expenses);
+
+
+    //update the remaining budget
+    ui.updateRest(rest);
+
+    //check if budget is down
+    ui.checkBudget(budget);
+
+    //reset form
+    form.reset();
+
 }
+
+function deleteExpense(id) {
+
+    //delete from the object
+    budget.deleteExpense(id);
+
+    //delete from html
+    const {expenses, rest} = budget;
+    ui.addExpenseHTML(expenses);
+
+    //update the remaining budget
+    ui.updateRest(rest);
+
+    //check if budget is down
+    ui.checkBudget(budget);
+
+};
+
