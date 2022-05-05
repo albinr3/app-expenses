@@ -6,26 +6,33 @@ const expensesList = document.querySelector("#gastos ul");
 //events
 eventListeners();
 function eventListeners() {
+
+     //load expenses localStorage
+    document.addEventListener("DOMContentLoaded", () => {
+        expensesLocal = JSON.parse(localStorage.getItem("Expenses")) || [];
+    });  
+
+    //ask for budget 
     document.addEventListener("DOMContentLoaded", askBudget);
+
 
     form.addEventListener("submit", addExpense);
 
-    const deleteBtn = document.querySelector("#delete-btn");
-    
 }
 
 
 //classes
 class Budget {
-    constructor(budget) {
+    constructor(budget, rest) {
         this.budget = Number(budget);
-        this.rest = Number(budget);
-        this.expenses = [];
+        this.rest = Number(rest);
+        this.expenses = expensesLocal;
     }
 
     newExpense(expense) {
         this.expenses = [...this.expenses, expense];
         this.calculateRest();
+        localStorage.setItem("Expenses", JSON.stringify(this.expenses));
     }
 
     calculateRest() {
@@ -39,12 +46,14 @@ class Budget {
        
     }
 
+    
+
 }
 
 class UI {
-    insertBudget(amount) {
+    insertBudget(budgetAmount) {
         //getting the values
-        const {budget, rest} = amount;
+        const {budget, rest} = budgetAmount;
 
         //writing it to the html
         document.querySelector("#total").textContent = budget;
@@ -111,6 +120,8 @@ class UI {
 
     updateRest(rest) {
         document.querySelector("#restante").textContent = rest;
+        //insert rest to localstorage
+        localStorage.setItem("Budget", JSON.stringify(budget));
     }
 
     checkBudget(budgetObj) {
@@ -146,15 +157,31 @@ let budget;
 
 //functions
 function askBudget() {
-    const userBudget = prompt("What is your budget?");
-    console.log(userBudget);
-    if(userBudget === "" || userBudget == null || isNaN(userBudget) || userBudget <= 0) {
-        window.location.reload();
-    };
+    if(localStorage.getItem("Budget")) {
+        const budgetLocal = JSON.parse(localStorage.getItem("Budget"))
+        console.log(budgetLocal.rest);
+        budget = new Budget(budgetLocal.budget, budgetLocal.rest);
 
-    //Valid budget
-    budget = new Budget(userBudget);
+        //check if the budget is down and change color also create the html of the expenses
+        updateExpensesHTML(expensesLocal);
+        
+    } else {
+        const userBudget = prompt("What is your budget?");
+        
+        if(userBudget === "" || userBudget == null || isNaN(userBudget) || userBudget <= 0) {
+            window.location.reload();
+        };
+
+        //Valid budget
+        budget = new Budget(userBudget, userBudget);
+        
+
+        //insert budget to localstorage
+        localStorage.setItem("Budget", JSON.stringify(budget));
+
+    }
     ui.insertBudget(budget);
+    
 
 }
 
@@ -211,11 +238,22 @@ function deleteExpense(id) {
     const {expenses, rest} = budget;
     ui.addExpenseHTML(expenses);
 
+    //delete from localstorage
+    localStorage.setItem("Expenses", JSON.stringify(expenses));
+
     //update the remaining budget
     ui.updateRest(rest);
 
-    //check if budget is down
+    //check if budget is down and change color
     ui.checkBudget(budget);
 
+};
+
+
+function updateExpensesHTML(expenses) {
+    ui.addExpenseHTML(expenses);
+
+    //check if budget is down and change color
+    ui.checkBudget(budget);
 };
 
